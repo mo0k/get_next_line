@@ -1,86 +1,94 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   get_next_line.c                                    :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: jmoucade <marvin@42.fr>                    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2016/11/26 06:38:16 by jmoucade          #+#    #+#             */
+/*   Updated: 2016/11/26 06:38:20 by jmoucade         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "get_next_line.h"
 #include "libft.h"
 
-t_file	*check_fd(int fd, t_file *file)
+static t_file		*check_fd(int fd, t_file *f)
 {
-	char *buff;
+	char			*buff;
 
 	buff = NULL;
-	if (!file || fd < 0 || read(fd, buff, 0) == -1)
+	if (!f || fd < 0 || read(fd, buff, 0) == -1)
 		return (NULL);
-	while (file->next)
+	while (f->next)
 	{
-		if (file->next->fd == fd)
-			return (file->next);
-		file = file->next;
+		if (f->next->fd == fd)
+			return (f->next);
+		f = f->next;
 	}
-	if(!(file->next = (t_file*)malloc(sizeof(t_file))))
+	if (!(f->next = (t_file*)malloc(sizeof(t_file))))
 		return (NULL);
-	file->next->next = NULL;
-	file->next->fd = fd;
-	file->next->data = NULL;
-	file->next->read = 0;
-	file->next->all_read = 0;
-	file->next->state = 0;
-
-	return (file->next);
+	f->next->next = NULL;
+	f->next->fd = fd;
+	f->next->data = NULL;
+	f->next->read = 0;
+	f->next->all_read = 0;
+	f->next->protect = 0;
+	return (f->next);
 }
 
-int					stock_line(t_file *file, char *buff)
+static int			realloc_line(t_file *f, char *buff)
 {
 	char			*tmp;
 
-	if (!file || !buff)
-		return (-1);
-	if (file->read)
+	if (!f || !buff)
+		return (0);
+	if (f->read)
 	{
-		tmp = ft_strjoin(file->data, buff);
-		free(file->data);
-		file->data = ft_strdup(tmp);
+		tmp = ft_strjoin(f->data, buff);
+		free(f->data);
+		f->data = ft_strdup(tmp);
 		free(tmp);
 	}
 	else
 	{
-		file->data = ft_strdup(buff);
-		file->read = 1;
+		f->data = ft_strdup(buff);
+		f->read = 1;
 	}
-
 	return (1);
 }
 
-int					read_line(t_file *file, char **line)
+static int			read_line(t_file *f, char **line)
 {
 	char			buff[BUFF_SIZE + 1];
 	int				ret;
 	char			*p;
 
-	if (!file || !line)
+	if (!f || !line)
 		return (ERROR);
-
-	while ((ret = read(file->fd, buff, BUFF_SIZE)) > 0 || (file->state && file->data[0]))
+	while ((ret = read(f->fd, buff, BUFF_SIZE)) || (f->protect && f->data[0]))
 	{
-		file->state = 1;
 		buff[ret] = 0;
-		if (stock_line(file, buff) == -1)
-			return (-1);
-		p = ft_strchr(file->data, 0x0a);
-		if (!p) //NON trouver 0x0a
+		f->protect = 1;
+		if (!realloc_line(f, buff))
+			return (ERROR);
+		p = ft_strchr(f->data, 0x0a);
+		if (!p)
 		{
-			if (!ret && file->read)
+			if (!ret && f->read)
 			{
-				line[0] = ft_strdup(file->data);
-				free(file->data);
-				file->all_read = 1;
+				line[0] = ft_strdup(f->data);
+				free(f->data);
 				return (END_OF_LINE);
 			}
 		}
-		else //0x0a trouver
+		else
 		{
-			line[0] = (char*)ft_memalloc(p - file->data + 1);
-			if (p - file->data > 0)
-				line[0] = (char*)ft_memmove(line[0], file->data, p - file->data);
-			free(file->data);
-			file->data = ft_strdup(p + 1);
+			line[0] = (char*)ft_memalloc(p - f->data + 1);
+			if (p - f->data > 0)
+				line[0] = (char*)ft_memmove(line[0], f->data, p - f->data);
+			free(f->data);
+			f->data = ft_strdup(p + 1);
 			return (END_OF_LINE);
 		}
 	}
@@ -89,27 +97,27 @@ int					read_line(t_file *file, char **line)
 
 int					get_next_line(const int fd, char **line)
 {
-	static t_file	*file;
+	static t_file	*f;
 	t_file			*tmp;
-	int 			ret;
+	int				ret;
 
-	if(!line)
+	if (!line)
 		return (ERROR);
-	if(!(line[0] = (char*)ft_memalloc(1)))
-			return (ERROR);
-	if(!file)
-	{
-		if(!(file = (t_file*)malloc(sizeof(t_file))))
-			return (ERROR);
-		file->next = NULL;
-	}
-	tmp = file;
-	if (!(file = check_fd(fd, file)))
+	if (!(line[0] = (char*)ft_memalloc(1)))
 		return (ERROR);
-	if ((ret = read_line(file, &line[0])))
+	if (!f)
 	{
-		file = tmp;
-		return (ret);
+		if (!(f = (t_file*)malloc(sizeof(t_file))))
+			return (ERROR);
+		f->next = NULL;
 	}
-	return (ret);
+	tmp = f;
+	if (!(f = check_fd(fd, f)))
+		return (ERROR);
+	if ((ret = read_line(f, &line[0])))
+	{
+		f = tmp;
+		return (END_OF_LINE);
+	}
+	return (END_OF_FILE);
 }
