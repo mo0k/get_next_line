@@ -37,60 +37,69 @@ static t_file		*check_fd(int fd, t_file *f)
 	return (f->next);
 }
 
-static int			realloc_line(t_file *f, char *buff)
+static int			memrealloc(char **dst, char *src)
 {
 	char			*tmp;
 
-	if (!f || !buff)
+	if (!dst || !src)
 		return (0);
-	if (f->read)
-	{
-		tmp = ft_strjoin(f->data, buff);
-		free(f->data);
-		f->data = ft_strdup(tmp);
-		free(tmp);
-	}
-	else
-	{
-		f->data = ft_strdup(buff);
-		f->read = 1;
-	}
+	if (!(tmp = ft_strjoin(*dst, src)))
+			return (0);
+	free(*dst);
+	if (!(*dst = ft_strdup(tmp)))
+		return (0);
+	free(tmp);
 	return (1);
+}
+
+static int			is_endline(t_file *f, char **line, int ret)
+{
+	char			*p;
+
+	if ((p = ft_strchr(f->data, 0x0a)))
+	{
+		free(line[0]);
+		line[0] = (char*)ft_memalloc(p - f->data + 1);
+		if (p - f->data > 0)
+			line[0] = (char*)ft_memmove(line[0], f->data, p - f->data);
+		free(f->data);
+		f->data = ft_strdup(p + 1);
+		return (END_OF_LINE);
+	}
+	if (!p && !ret && f->read)
+	{
+		free(line[0]);
+		line[0] = ft_strdup(f->data);
+		free(f->data);
+		return (END_OF_LINE);
+	}
+	return (0);
 }
 
 static int			read_line(t_file *f, char **line)
 {
 	char			buff[BUFF_SIZE + 1];
 	int				ret;
-	char			*p;
 
-	if (!f || !line)
+	if (!f || !line || !*line)
 		return (ERROR);
 	while ((ret = read(f->fd, buff, BUFF_SIZE)) || (f->protect && f->data[0]))
 	{
 		buff[ret] = 0;
 		f->protect = 1;
-		if (!realloc_line(f, buff))
-			return (ERROR);
-		p = ft_strchr(f->data, 0x0a);
-		if (!p)
+		if (!f->read)
 		{
-			if (!ret && f->read)
-			{
-				line[0] = ft_strdup(f->data);
-				free(f->data);
-				return (END_OF_LINE);
-			}
+			if (!(f->data = ft_strdup(buff)))
+				return (ERROR);
+			f->read = 1;
 		}
 		else
 		{
-			line[0] = (char*)ft_memalloc(p - f->data + 1);
-			if (p - f->data > 0)
-				line[0] = (char*)ft_memmove(line[0], f->data, p - f->data);
-			free(f->data);
-			f->data = ft_strdup(p + 1);
-			return (END_OF_LINE);
+			if (!memrealloc(&f->data, buff))
+				return (ERROR);
 		}
+		if (is_endline(f, line, ret))
+			return (END_OF_LINE);
 	}
 	return (END_OF_FILE);
 }
@@ -114,10 +123,11 @@ int					get_next_line(const int fd, char **line)
 	tmp = f;
 	if (!(f = check_fd(fd, f)))
 		return (ERROR);
-	if ((ret = read_line(f, &line[0])))
+	if ((ret = read_line(f, line)))
 	{
 		f = tmp;
 		return (END_OF_LINE);
 	}
-	return (END_OF_FILE);
+	return ((ret == ERROR) ? ERROR : END_OF_FILE);
+	//return (END_OF_FILE);
 }
