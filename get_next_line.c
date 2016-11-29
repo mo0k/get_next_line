@@ -59,17 +59,22 @@ static int			is_endline(t_file *f, char **line, int ret)
 	if ((p = ft_strchr(f->data, 0x0a)))
 	{
 		free(line[0]);
-		line[0] = (char*)ft_memalloc(p - f->data + 1);
+		if(!(line[0] = (char*)ft_memalloc(p - f->data + 1)))
+			return (ERROR);
 		if (p - f->data > 0)
+		{
 			line[0] = (char*)ft_memmove(line[0], f->data, p - f->data);
+		}
 		free(f->data);
-		f->data = ft_strdup(p + 1);
+		if(!(f->data = ft_strdup(p + 1)))
+			return (ERROR);
 		return (END_OF_LINE);
 	}
 	if (!p && !ret && f->read)
 	{
 		free(line[0]);
-		line[0] = ft_strdup(f->data);
+		if(!(line[0] = ft_strdup(f->data)))
+			return (ERROR);
 		free(f->data);
 		return (END_OF_LINE);
 	}
@@ -80,6 +85,7 @@ static int			read_line(t_file *f, char **line)
 {
 	char			buff[BUFF_SIZE + 1];
 	int				ret;
+	int				endline;
 
 	if (!f || !line || !*line)
 		return (ERROR);
@@ -94,12 +100,12 @@ static int			read_line(t_file *f, char **line)
 			f->read = 1;
 		}
 		else
-		{
 			if (!memrealloc(&f->data, buff))
 				return (ERROR);
-		}
-		if (is_endline(f, line, ret))
+		if ((endline = is_endline(f, line, ret)))
 			return (END_OF_LINE);
+		if (endline == ERROR)
+			return (ERROR);
 	}
 	return (END_OF_FILE);
 }
@@ -129,5 +135,4 @@ int					get_next_line(const int fd, char **line)
 		return (END_OF_LINE);
 	}
 	return ((ret == ERROR) ? ERROR : END_OF_FILE);
-	//return (END_OF_FILE);
 }

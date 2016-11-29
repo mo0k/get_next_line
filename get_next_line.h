@@ -20,7 +20,7 @@
 # define END_OF_FILE 0
 # define END_OF_LINE 1
 
-# define BUFF_SIZE 25
+# define BUFF_SIZE 32
 
 typedef struct		s_file
 {
