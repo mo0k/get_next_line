@@ -37,14 +37,14 @@ static t_file		*check_fd(int fd, t_file *f)
 	return (f->next);
 }
 
-static int			memrealloc(char **dst, char *src)
+static int			memcat(char **dst, char *src)
 {
 	char			*tmp;
 
-	if (!dst || !src)
+	if (!dst || !src || !*dst)
 		return (0);
 	if (!(tmp = ft_strjoin(*dst, src)))
-			return (0);
+		return (0);
 	free(*dst);
 	if (!(*dst = ft_strdup(tmp)))
 		return (0);
@@ -59,22 +59,20 @@ static int			is_endline(t_file *f, char **line, int ret)
 	if ((p = ft_strchr(f->data, 0x0a)))
 	{
 		free(line[0]);
-		if(!(line[0] = (char*)ft_memalloc(p - f->data + 1)))
+		if (!(line[0] = (char*)ft_memalloc(p - f->data + 1)))
 			return (ERROR);
-		if (p - f->data > 0)
-		{
-			line[0] = (char*)ft_memmove(line[0], f->data, p - f->data);
-		}
+		line[0] = (char*)ft_memmove(line[0], f->data, p - f->data);
 		free(f->data);
-		if(!(f->data = ft_strdup(p + 1)))
+		if (!(f->data = ft_strdup(p + 1)))
 			return (ERROR);
 		return (END_OF_LINE);
 	}
 	if (!p && !ret && f->read)
 	{
 		free(line[0]);
-		if(!(line[0] = ft_strdup(f->data)))
+		if (!(line[0] = ft_strdup(f->data)))
 			return (ERROR);
+		ft_bzero(f->data, ft_strlen(f->data));
 		free(f->data);
 		return (END_OF_LINE);
 	}
@@ -99,9 +97,8 @@ static int			read_line(t_file *f, char **line)
 				return (ERROR);
 			f->read = 1;
 		}
-		else
-			if (!memrealloc(&f->data, buff))
-				return (ERROR);
+		else if (!memcat(&f->data, buff))
+			return (ERROR);
 		if ((endline = is_endline(f, line, ret)))
 			return (END_OF_LINE);
 		if (endline == ERROR)
@@ -116,9 +113,7 @@ int					get_next_line(const int fd, char **line)
 	t_file			*tmp;
 	int				ret;
 
-	if (!line)
-		return (ERROR);
-	if (!(line[0] = (char*)ft_memalloc(1)))
+	if (!line || !(line[0] = (char*)ft_memalloc(1)))
 		return (ERROR);
 	if (!f)
 	{
@@ -128,7 +123,10 @@ int					get_next_line(const int fd, char **line)
 	}
 	tmp = f;
 	if (!(f = check_fd(fd, f)))
+	{
+		f = tmp;
 		return (ERROR);
+	}
 	if ((ret = read_line(f, line)))
 	{
 		f = tmp;
