@@ -37,7 +37,7 @@ static t_file		*check_fd(int fd, t_file *f)
 	return (f->next);
 }
 
-static int			memcat(char **dst, char *src)
+static int			ft_stracat(char **dst, char *src)
 {
 	char			*tmp;
 
@@ -54,20 +54,20 @@ static int			memcat(char **dst, char *src)
 
 static int			is_endline(t_file *f, char **line, int ret)
 {
-	char			*p;
+	char			*r;
 
-	if ((p = ft_strchr(f->data, 0x0a)))
+	if ((r = ft_strchr(f->data, 0x0a)))
 	{
 		free(line[0]);
-		if (!(line[0] = (char*)ft_memalloc(p - f->data + 1)))
+		if (!(line[0] = (char*)ft_memalloc(r - f->data + 1)))
 			return (ERROR);
-		line[0] = (char*)ft_memmove(line[0], f->data, p - f->data);
+		line[0] = (char*)ft_memmove(line[0], f->data, r - f->data);
 		free(f->data);
-		if (!(f->data = ft_strdup(p + 1)))
+		if (!(f->data = ft_strdup(r + 1)))
 			return (ERROR);
 		return (END_OF_LINE);
 	}
-	if (!p && !ret && f->read)
+	if (!r && !ret && f->read)
 	{
 		free(line[0]);
 		if (!(line[0] = ft_strdup(f->data)))
@@ -97,7 +97,7 @@ static int			read_line(t_file *f, char **line)
 				return (ERROR);
 			f->read = 1;
 		}
-		else if (!memcat(&f->data, buff))
+		else if (!ft_stracat(&f->data, buff))
 			return (ERROR);
 		if ((endline = is_endline(f, line, ret)))
 			return (END_OF_LINE);
