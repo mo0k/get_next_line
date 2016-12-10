@@ -20,13 +20,13 @@
 # define END_OF_FILE 0
 # define END_OF_LINE 1
 
-# define BUFF_SIZE 4096
+# define BUFF_SIZE 8
 
 typedef struct		s_file
 {
 	int				fd;
 	char			*data;
-	int 			eof;
+	int				eof;
 	struct s_file	*next;
 }					t_file;
 

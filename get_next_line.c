@@ -56,16 +56,16 @@ static int			ft_stracat(char **dst, char *src)
 	return (1);
 }
 
-
 static int			is_endline(t_file *f, char **line, int ret)
 {
 	char			*r;
-	char 			*tmp;
+	char			*tmp;
 
 	if ((r = ft_strchr(f->data, 0x0a)))
 	{
 		*r = 0;
-		if (!(tmp = ft_strdup(r + 1)) || !(*line = ft_strdup(f->data)))
+		if (!(tmp = ft_strdup(r + 1)) ||
+			!(*line = ft_strdup(f->data)))
 			return (ERROR);
 		free(f->data);
 		if (!(f->data = ft_strdup(tmp)))
@@ -74,14 +74,13 @@ static int			is_endline(t_file *f, char **line, int ret)
 		return (END_OF_LINE);
 	}
 	else if (ret == 0 && (int)ft_strlen(f->data) == 0)
-			f->eof = 1;
-	else if(ret == 0 && (int)ft_strlen(f->data) > 0)
+		f->eof = 1;
+	else if (ret == 0 && (int)ft_strlen(f->data) > 0)
 	{
-			if (!(*line = ft_strdup(f->data)))
-				return (ERROR);
-			free(f->data);
-			f->eof = 1;
-			return (END_OF_LINE);
+		if (!(*line = ft_strdup(f->data)))
+			return (ERROR);
+		(f->eof = 1) ? free(f->data) : NULL;
+		return (END_OF_LINE);
 	}
 	return (0);
 }
@@ -89,9 +88,9 @@ static int			is_endline(t_file *f, char **line, int ret)
 static int			read_line(t_file *f, char **line, char *buff)
 {
 	int				ret;
-	int 			endline;
+	int				endline;
 
-	if (!f) 
+	if (!f)
 		return (ERROR);
 	while ((ret = read(f->fd, buff, BUFF_SIZE)) || f->eof == 0)
 	{
@@ -111,6 +110,7 @@ static int			read_line(t_file *f, char **line, char *buff)
 		else if (endline == ERROR)
 			return (ERROR);
 	}
+	*line = NULL;
 	return (END_OF_FILE);
 }
 
@@ -122,7 +122,7 @@ int					get_next_line(const int fd, char **line)
 	char			*buff;
 
 	if (!(buff = (char*)ft_memalloc(sizeof(char) * BUFF_SIZE + 1)))
-			return (ERROR);
+		return (ERROR);
 	if (!(tmp = check_fd(fd, &f)))
 		return (ERROR);
 	ret = read_line(tmp, line, buff);
